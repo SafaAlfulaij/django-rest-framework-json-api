@@ -43,11 +43,13 @@ urlpatterns = [
     url(
         r"entries/(?P<entry_pk>[^/.]+)/blog$",
         BlogViewSet.as_view({"get": "retrieve"}),
+        {"parent_kwarg": "entry_pk", "parent_viewset": EntryViewSet},
         name="entry-blog",
     ),
     url(
         r"entries/(?P<entry_pk>[^/.]+)/comments$",
         CommentViewSet.as_view({"get": "list"}),
+        {"parent_kwarg": "entry_pk", "parent_viewset": EntryViewSet},
         name="entry-comments",
     ),
     url(

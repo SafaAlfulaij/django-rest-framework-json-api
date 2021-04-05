@@ -5,6 +5,8 @@ from rest_framework import serializers as drf_serilazers
 
 from rest_framework_json_api import relations, serializers
 
+from zen_queries.rest_framework import QueriesDisabledSerializerMixin
+
 from example.models import (
     ArtProject,
     Author,
@@ -81,15 +83,7 @@ class BlogDRFSerializer(drf_serilazers.ModelSerializer):
         meta_fields = ("copyright",)
 
 
-class EntrySerializer(serializers.ModelSerializer):
-    def __init__(self, *args, **kwargs):
-        super(EntrySerializer, self).__init__(*args, **kwargs)
-        # to make testing more concise we'll only output the
-        # `featured` field when it's requested via `include`
-        request = kwargs.get("context", {}).get("request")
-        if request and "featured" not in request.query_params.get("include", []):
-            self.fields.pop("featured", None)
-
+class EntrySerializer(QueriesDisabledSerializerMixin, serializers.ModelSerializer):
     included_serializers = {
         "authors": "example.serializers.AuthorSerializer",
         "comments": "example.serializers.CommentSerializer",
@@ -119,13 +113,13 @@ class EntrySerializer(serializers.ModelSerializer):
         source="comments",
     )
     # many related from serializer
-    suggested = relations.SerializerMethodResourceRelatedField(
-        related_link_view_name="entry-suggested",
-        related_link_url_kwarg="entry_pk",
-        self_link_view_name="entry-relationships",
-        model=Entry,
-        many=True,
-    )
+    #suggested = relations.SerializerMethodResourceRelatedField(
+        #related_link_view_name="entry-suggested",
+        #related_link_url_kwarg="entry_pk",
+        #self_link_view_name="entry-relationships",
+        #model=Entry,
+        #many=True,
+    #)
     # many related hyperlinked from serializer
     suggested_hyperlinked = relations.SerializerMethodHyperlinkedRelatedField(
         related_link_view_name="entry-suggested",
@@ -135,7 +129,7 @@ class EntrySerializer(serializers.ModelSerializer):
         many=True,
     )
     # single related from serializer
-    featured = relations.SerializerMethodResourceRelatedField(model=Entry)
+    #featured = relations.SerializerMethodResourceRelatedField(model=Entry)
     # single related hyperlinked from serializer
     featured_hyperlinked = relations.SerializerMethodHyperlinkedRelatedField(
         related_link_view_name="entry-featured",
@@ -144,13 +138,13 @@ class EntrySerializer(serializers.ModelSerializer):
         model=Entry,
         read_only=True,
     )
-    tags = relations.ResourceRelatedField(many=True, read_only=True)
+    #tags = relations.ResourceRelatedField(many=True, read_only=True)
 
-    def get_suggested(self, obj):
-        return Entry.objects.exclude(pk=obj.pk)
+    #def get_suggested(self, obj):
+        #return Entry.objects.exclude(pk=obj.pk)
 
-    def get_featured(self, obj):
-        return Entry.objects.exclude(pk=obj.pk).first()
+    #def get_featured(self, obj):
+        #return Entry.objects.exclude(pk=obj.pk).first()
 
     def get_body_format(self, obj):
         return "text"
@@ -167,21 +161,20 @@ class EntrySerializer(serializers.ModelSerializer):
             "authors",
             "comments",
             "comments_hyperlinked",
-            "featured",
-            "suggested",
+            #"featured",
+            #"suggested",
             "suggested_hyperlinked",
-            "tags",
+            #"tags",
             "featured_hyperlinked",
         )
         read_only_fields = ("tags",)
         meta_fields = ("body_format",)
 
-    class JSONAPIMeta:
-        included_resources = ["comments"]
+    #class JSONAPIMeta:
+        #included_resources = ["comments"]
 
 
 class EntryDRFSerializers(drf_serilazers.ModelSerializer):
-
     tags = TaggedItemDRFSerializer(many=True, read_only=True)
     url = drf_serilazers.HyperlinkedIdentityField(
         view_name="drf-entry-blog-detail",
@@ -301,7 +294,7 @@ class WriterSerializer(serializers.ModelSerializer):
         resource_name = "writers"
 
 
-class CommentSerializer(serializers.ModelSerializer):
+class CommentSerializer(QueriesDisabledSerializerMixin, serializers.ModelSerializer):
     # testing remapping of related name
     writer = relations.ResourceRelatedField(source="author", read_only=True)
     modified_days_ago = serializers.SerializerMethodField()

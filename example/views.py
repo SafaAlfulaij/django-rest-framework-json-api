@@ -38,12 +38,39 @@ class BlogViewSet(ModelViewSet):
     queryset = Blog.objects.all()
     serializer_class = BlogSerializer
 
-    def get_object(self):
-        entry_pk = self.kwargs.get("entry_pk", None)
-        if entry_pk is not None:
-            return Entry.objects.get(id=entry_pk).blog
+    def get_queryset(self):
+        queryset = super().get_queryset()
 
-        return super(BlogViewSet, self).get_object()
+        if 'parent_viewset' in self.kwargs:
+            parent_viewset = self.kwargs['parent_viewset']
+            parent_kwarg = self.kwargs['parent_kwarg']
+            instance = parent_viewset(
+                request=self.request,
+                kwargs={'pk': self.kwargs[parent_kwarg]}
+            )
+            instance.get_object()
+
+        return queryset
+
+    def get_object(self):
+
+        if 'parent_viewset' in self.kwargs:
+            parent_viewset = self.kwargs['parent_viewset']
+            parent_kwarg = self.kwargs['parent_kwarg']
+            viewset = parent_viewset(
+                request=self.request,
+                kwargs={'pk': self.kwargs[parent_kwarg]}
+            )
+            parent_instance = viewset.get_object()
+            return parent_instance.blog
+
+        return super().get_object()
+
+        #entry_pk = self.kwargs.get("entry_pk", None)
+        #if entry_pk is not None:
+            #return Entry.objects.get(id=entry_pk).blog
+
+        #return super(BlogViewSet, self).get_object()
 
 
 class DRFBlogViewSet(ModelViewSet):
@@ -98,6 +125,22 @@ class EntryViewSet(ModelViewSet):
     queryset = Entry.objects.all()
     resource_name = "posts"
 
+    @property
+    def can_annotate_queryset(self):
+        return not 'child_viewset' in self.kwargs
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+
+        if self.can_annotate_queryset:
+            queryset = queryset.select_related(
+                'blog',
+            ).prefetch_related(
+                'authors', 'comments', 'tags',
+            )
+
+        return queryset
+
     def get_serializer_class(self):
         return EntrySerializer
 
@@ -109,7 +152,7 @@ class EntryViewSet(ModelViewSet):
 
         return super(EntryViewSet, self).get_object()
 
-
+# BEGIN
 class DRFEntryViewSet(ModelViewSet):
     queryset = Entry.objects.all()
     serializer_class = EntryDRFSerializers
@@ -220,6 +263,7 @@ class AuthorViewSet(ModelViewSet):
         except AttributeError:
             return self.serializer_class
 
+# END
 
 class CommentViewSet(ModelViewSet):
     queryset = Comment.objects.all()
@@ -230,12 +274,30 @@ class CommentViewSet(ModelViewSet):
         "author": ["author__bio", "author__entries"],
     }
 
-    def get_queryset(self, *args, **kwargs):
-        entry_pk = self.kwargs.get("entry_pk", None)
-        if entry_pk is not None:
-            return self.queryset.filter(entry_id=entry_pk)
+    def get_queryset(self):
+        queryset = super().get_queryset()
 
-        return super(CommentViewSet, self).get_queryset()
+        if 'parent_viewset' in self.kwargs:
+            parent_viewset = self.kwargs['parent_viewset']
+            parent_kwarg = self.kwargs['parent_kwarg']
+            if not getattr(self, '_parent_instance', None):
+                viewset = parent_viewset(
+                    request=self.request,
+                    kwargs={'pk': self.kwargs[parent_kwarg], 'child_viewset': type(self)}
+                )
+                self._parent_instance = viewset.get_object()
+
+            related_queryset = getattr(self, f'get_queryset_for_{parent_kwarg}', None)
+            if related_queryset:
+                queryset = related_queryset(queryset, self._parent_instance)
+
+        return queryset
+
+    def get_queryset_for_entry_pk(self, queryset, instance):
+        queryset = queryset.filter(
+            entry_id=instance.id
+        )
+        return queryset
 
 
 class CompanyViewset(ModelViewSet):

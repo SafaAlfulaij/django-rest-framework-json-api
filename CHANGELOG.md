@@ -8,6 +8,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 Note that in line with [Django REST Framework policy](http://www.django-rest-framework.org/topics/release-notes/),
 any parts of the framework not mentioned in the documentation should generally be considered private API, and may be subject to change.
 
+## [Unreleased]
+
+### Added
+
+* Added support for Django 3.2.
+
+### Fixed
+
+* Allow `get_serializer_class` to be overwritten when using related urls without defining `serializer_class` fallback
+
 ## [4.1.0] - 2021-03-08
 
 ### Added

@@ -421,7 +421,7 @@ class JSONRenderer(renderers.JSONRenderer):
         meta_fields = getattr(meta, "meta_fields", [])
         data = OrderedDict()
         for field_name in meta_fields:
-            if field_name not in fields:
+            if field_name in fields:
                 data.update({field_name: resource.get(field_name)})
         return data
 

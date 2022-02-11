@@ -409,7 +409,7 @@ class JSONRenderer(renderers.JSONRenderer):
                     )
 
     @classmethod
-    def extract_meta(cls, serializer, resource):
+    def extract_meta(cls, fields, serializer, resource):
         """
         Gathers the data from serializer fields specified in meta_fields and adds it to
         the meta object.
@@ -421,7 +421,8 @@ class JSONRenderer(renderers.JSONRenderer):
         meta_fields = getattr(meta, "meta_fields", [])
         data = OrderedDict()
         for field_name in meta_fields:
-            data.update({field_name: resource.get(field_name)})
+            if field_name not in fields:
+                data.update({field_name: resource.get(field_name)})
         return data
 
     @classmethod
@@ -476,7 +477,7 @@ class JSONRenderer(renderers.JSONRenderer):
                 ("links", {"self": resource[api_settings.URL_FIELD_NAME]})
             )
 
-        meta = cls.extract_meta(serializer, resource)
+        meta = cls.extract_meta(fields, serializer, resource)
         if meta:
             resource_data.append(("meta", utils.format_field_names(meta)))
 
